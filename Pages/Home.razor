@@ -1,9 +1,89 @@
 ﻿@page "/"
+@inject NavigationManager NavigationManager
+@using System.ComponentModel.DataAnnotations
+@using FirebaseAdmin.Auth
+@using FirebaseAdmin
+@using Google.Apis.Auth.OAuth2
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Login</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Login</h1>
 
-<h1>Hello, Blazor from VS Code!</h1>
+<EditForm Model="@loginModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
 
-Welcome to your new app.
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <InputText id="email" @bind-Value="loginModel.Email" class="form-control" />
+        <ValidationMessage For="@(() => loginModel.Email)" />
+    </div>
+
+    <div class="form-group">
+        <label for="password">Password:</label>
+        <InputText type="password" id="password" @bind-Value="loginModel.Password" class="form-control" />
+        <ValidationMessage For="@(() => loginModel.Password)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Log in</button>
+</EditForm>
+
+<button class="btn btn-secondary mt-3" @onclick="NavigateToWeather">Go to Weather</button>
+
+@code {
+    private LoginModel loginModel = new LoginModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitializeFirebaseApp();
+    }
+
+    private async Task InitializeFirebaseApp()
+    {
+        await JSRuntime.InvokeVoidAsync("initializeFirebase");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            var userCredential = await JSRuntime.InvokeAsync<UserCredential>("signInWithEmailAndPassword", loginModel.Email,
+            loginModel.Password);
+            Console.WriteLine($"Login successful: {userCredential.User.Email}");
+            NavigationManager.NavigateTo("/counter");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Login failed: {ex.Message}");
+        }
+    }
+
+    private void NavigateToWeather()
+    {
+        NavigationManager.NavigateTo("/weather");
+    }
+
+    public class LoginModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = string.Empty;
+    }
+}
+
+@code {
+    public class UserCredential
+    {
+        public User User { get; set; } = null!;
+    }
+
+    public class User
+    {
+        public string Email { get; set; } = null!;
+    }
+}
